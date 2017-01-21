@@ -2,3 +2,5 @@ metastore_db/*
 .ipynb_checkpoints/*
 daily_engagement_full.csv
 derby.log
+.Rproj.user
+*_cache
