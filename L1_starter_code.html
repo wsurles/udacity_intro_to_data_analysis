@@ -103,19 +103,9 @@ Its helpful for me to think in different languages about what I am trying to do.
 <h2>Set up</h2>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">library</span>(readr)
 <span class="kw">library</span>(dplyr)</code></pre></div>
-<pre><code>## 
-## Attaching package: 'dplyr'
-## 
-## The following objects are masked from 'package:stats':
-## 
-##     filter, lag
-## 
-## The following objects are masked from 'package:base':
-## 
-##     intersect, setdiff, setequal, union</code></pre>
 </div>
 <div id="load-data-from-csvs" class="section level2">
-<h2>Load Data from csvs</h2>
+<h2>Load Data from CSVs</h2>
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">enrollments &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;data/enrollments.csv&quot;</span>)
 engagement &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;data/daily_engagement.csv&quot;</span>)
 project &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span class="st">&quot;data/project_submissions.csv&quot;</span>)
@@ -145,8 +135,7 @@ project &lt;-<span class="st"> </span><span class="kw">read.csv</span>(<span cla
 ##  $ account_key     : int  256 256 256 434 434 381 381 381 381 381 ...
 ##  $ lesson_key      : num  3.18e+09 3.18e+09 3.18e+09 3.18e+09 3.18e+09 ...
 ##  $ processing_state: Factor w/ 2 levels &quot;CREATED&quot;,&quot;EVALUATED&quot;: 2 2 2 2 2 2 2 2 2 2 ...</code></pre>
-<p>This was already pretty easy in R, but Hadley’s <code>readr</code> package makes it even better and more consistent to load files. One easy line, no loops. Read more about this package <a href="https://blog.rstudio.org/?s=readr">here</a></p>
-<p>There are better techniques to load the data types but I just look and then updated the ones I need (see below), because it does a good job guessing. And I am just exploring and this if fast to do.</p>
+<p>Read more about the <code>readr</code> package <a href="https://blog.rstudio.org/?s=readr">here</a></p>
 <p>Also note that the <code>str</code> function is really useful to get a glimpse of the data.</p>
 </div>
 <div id="fixing-data-types" class="section level2">
@@ -315,7 +304,7 @@ u_account_engagement &lt;-<span class="st"> </span><span class="kw">unique</span
 ## 49        1125 canceled 2015-05-31  2015-05-31              0      FALSE        TRUE
 ## 50        1129 canceled 2015-03-07  2015-03-07              0      FALSE        TRUE</code></pre>
 <p>Yeah, looks like some students join and then cancel on the same date. I also see some students signing up multiple times. Or even signing up and canceling multiple times on the same day.</p>
-<p>There is one student that is still current, but apparently has no engagement data. That student may be a data error worht checking into, or maybe they just have not used the platform at all since signing up</p>
+<p>There is one student that is still current, but apparently has no engagement data. That student may be a data error worth checking into, or maybe they just have not used the platform at all since signing up</p>
 </div>
 
 
