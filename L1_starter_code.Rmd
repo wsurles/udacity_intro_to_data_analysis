@@ -1,0 +1,149 @@
+---
+title: "L1_starter_code"
+author: "William Surles"
+date: "January 21, 2017"
+output: 
+  html_document:
+    self_contained: yes
+    theme: flatly
+    highlight: tango
+---
+
+This is just me copying the python class work into R.  
+Its helpful for me to think in different languages about what I am trying to do.
+
+
+## Set up
+
+```{r, echo=F}
+
+options(width=120)
+
+```
+
+```{r}
+
+library(readr)
+library(dplyr)
+
+```
+
+## Load Data from csvs
+
+```{r, echo=T, eval=T, cache=T}
+
+enrollments <- read.csv("data/enrollments.csv")
+engagement <- read.csv("data/daily_engagement.csv")
+project <- read.csv("data/project_submissions.csv")
+
+str(enrollments)
+str(engagement)
+str(project)
+
+```
+
+This was already pretty easy in R, but Hadley's `readr` package makes it even 
+better and more consistent to load files. 
+One easy line, no loops. 
+Read more about this package [here](https://blog.rstudio.org/?s=readr)
+
+There are better techniques to load the data types but I just look
+and then updated the ones I need (see below), because it does a good job guessing. 
+And I am just exploring and this if fast to do. 
+
+Also note that the `str` function is really useful to get a glimpse of the data. 
+
+## Fixing Data Types
+
+```{r, echo=T, eval=T, cache=T}
+
+## Enrollmenets
+enrollments$join_date <- as.Date(enrollments$join_date)
+enrollments$cancel_date <- as.Date(enrollments$cancel_date)
+enrollments$is_canceled <- as.logical(enrollments$is_canceled)
+enrollments$is_udacity <- as.logical(enrollments$is_udacity)
+
+str(enrollments)
+
+## Daily Engagment
+engagement$utc_date <- as.Date(engagement$utc_date)
+engagement$num_courses_visited <- as.integer(engagement$num_courses_visited)
+engagement$lessons_completed <- as.integer(engagement$lessons_completed)
+engagement$projects_completed <- as.integer(engagement$projects_completed)
+
+str(engagement)
+
+## Project Submissions
+project$creation_date <- as.Date(project$creation_date)
+project$completion_date <- as.Date(project$completion_date)
+
+str(project)
+```
+
+## Investigating the data
+
+```{r, echo=T, eval=T, cache=T}
+
+str(enrollments)
+
+n_distinct(enrollments$account_key)
+
+str(engagement)
+
+n_distinct(engagement$acct)
+
+str(project)
+
+n_distinct(project$account_key)
+
+```
+
+## Problems in the Data
+
+```{r, echo=T, eval=T, cache=T}
+
+engagement <- rename(engagement, account_key = acct)
+str(engagement)
+```
+
+## Missing Engagement Records
+
+```{r, echo=T, eval=T, cache=T}
+
+u_account_enrollments <- unique(enrollments$account_key)
+u_account_engagement <- unique(engagement$account_key)
+
+length(u_account_enrollments)
+length(u_account_engagement)
+
+length(u_account_enrollments) - length(u_account_engagement)
+
+setdiff(u_account_enrollments, u_account_engagement)
+setdiff(u_account_engagement, u_account_enrollments)
+
+
+```
+
+So there are 65 more accounts in enrollment than engagement.
+
+There are no accounts in engagement that are not in enrollment.
+
+I guess some students enroll and then do nothing at all. 
+
+```{r, echo=T, eval=T, cache=T}
+anti_join(enrollments, engagement) %>%
+  arrange(account_key) %>%
+  head(50)
+```
+
+Yeah, looks like some students join and then cancel on the same date. 
+I also see some students signing up multiple times.
+Or even signing up and canceling multiple times on the same day. 
+
+There is one student that is still current, but apparently has no engagement data.
+That student may be a data error worht checking into, or maybe they just
+have not used the platform at all since signing up
+
+```{r, echo=T, eval=T, cache=T}
+
+```
