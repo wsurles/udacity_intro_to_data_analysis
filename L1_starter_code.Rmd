@@ -12,12 +12,13 @@ output:
 This is just me copying the python class work into R.  
 Its helpful for me to think in different languages about what I am trying to do.
 
+***
 
 ## Set up
 
 ```{r, echo=F}
 
-options(width=120)
+options(width=100)
 
 ```
 
@@ -25,8 +26,12 @@ options(width=120)
 
 library(readr)
 library(dplyr)
+library(ggvis)
+library(DT)
 
 ```
+
+***
 
 ## Load Data from CSVs
 
@@ -45,6 +50,8 @@ str(project)
 Read more about the `readr` package [here](https://blog.rstudio.org/?s=readr)
 
 Also note that the `str` function is really useful to get a glimpse of the data. 
+
+***
 
 ## Fixing Data Types
 
@@ -73,6 +80,8 @@ project$completion_date <- as.Date(project$completion_date)
 str(project)
 ```
 
+***
+
 ## Investigating the data
 
 ```{r, echo=T, eval=T, cache=T}
@@ -91,6 +100,8 @@ n_distinct(project$account_key)
 
 ```
 
+***
+
 ## Problems in the Data
 
 ```{r, echo=T, eval=T, cache=T}
@@ -98,6 +109,8 @@ n_distinct(project$account_key)
 engagement <- rename(engagement, account_key = acct)
 str(engagement)
 ```
+
+***
 
 ## Missing Engagement Records
 
@@ -126,16 +139,230 @@ I guess some students enroll and then do nothing at all.
 ```{r, echo=T, eval=T, cache=T}
 anti_join(enrollments, engagement) %>%
   arrange(account_key) %>%
-  head(50)
+  head(10)
+
 ```
 
 Yeah, looks like some students join and then cancel on the same date. 
 I also see some students signing up multiple times.
 Or even signing up and canceling multiple times on the same day. 
 
+***
+
+## Checking for more problem records
+
+```{r, echo=T, eval=T, cache=T}
+
+anti_join(enrollments, engagement) %>%
+  arrange(account_key) %>% 
+  filter(status == 'current' | days_to_cancel > 0) 
+
+```
+
 There is one student that is still current, but apparently has no engagement data.
 That student may be a data error worth checking into, or maybe they just
 have not used the platform at all since signing up
+
+Another student has enrolled twice and cancelled way later but still had no engageent data. 
+
+***
+
+## Tracking down the remaining problems
+
+```{r, echo=T, eval=T, cache=T}
+
+table(enrollments$is_udacity)
+
+enrollments %>% 
+  filter(is_udacity == T)
+
+dim(enrollments)
+dim(engagement)
+dim(project)
+
+enrollments <- enrollments %>% 
+  filter(is_udacity == F)
+
+engagement <- engagement %>% 
+  filter(account_key %in% enrollments$account_key)
+
+project <- project %>% 
+  filter(account_key %in% enrollments$account_key)
+
+dim(enrollments)
+dim(engagement)
+dim(project)
+
+```
+
+There is no need to rename these data frames.  
+I have the original data and can easily load that if I need to see it. 
+
+My number for projects is lower than what I had in python. 
+There must be some accounts in the project df that are not in the enrollments.
+In python I compared to the list of udacity accounts. 
+Here I removed all accounts not in the enrollments df. 
+
+*** 
+
+## Refining the question
+
+Create a dictionary named paid_students containing all students who either
+haven't canceled yet or who remained enrolled for more than 7 days. The keys
+should be account keys, and the values should be the date the student enrolled.
+
+Those are the pythong instructions. In R I'll keep the data in a dataframe. 
+
+At this point I start to get curious and really want to see the data.  
+Seeing the data in a chart can really help. 
+In the python class I guess they are just taking it a step at a time.  
+But my first step us usually to make tables and histograms of data. 
+So, im gonna go ahead and do that. 
+
+```{r, echo=T, eval=T, cache=T}
+
+str(enrollments)
+
+table(enrollments$days_to_cancel)
+
+```
+
+
+```{r, echo=T, eval=T, cache=F, width=100}
+
+enrollments %>%
+  ggvis(~days_to_cancel) %>%
+  layer_histograms(width=1)
+
+```
+
+There are some spikes in the cancel dates.   
+Maybe its on the month or something.  
+I'll have to look into this later to see what that pattern is. 
+
+```{r, echo=T, eval=T, cache=T}
+
+enrollments %>%
+  arrange(account_key, join_date) %>%
+  head()
+
+```
+
+We will also want to only keep the max date for each account.  
+Some students have multiple enrollments. 
+
+```{r, echo=T, eval=T, cache=T}
+
+paid_students <- enrollments %>%
+  filter(
+    is_canceled == F |
+    days_to_cancel > 7
+  ) %>% 
+  group_by(account_key) %>%
+  top_n(n=1, join_date) %>%
+  data.frame()
+
+
+paid_students %>%
+  arrange(account_key, join_date) %>%
+  head()
+
+dim(paid_students)
+
+```
+
+I use the `top_n` function here with the df grouped by account_key to get 
+the max date for each student.  
+This and more techniques are in this [cheatsheet](https://www.rstudio.com/wp-content/uploads/2015/02/data-wrangling-cheatsheet.pdf).  
+Some students had joined and canceled multiple times. 
+For example, account_key 3 is now only in there once, with the most recent enrollment. 
+
+***
+
+## Getting Data from first week
+
+```{r, echo=T, eval=T, cache=T, width=100}
+
+head(engagement)
+head(paid_students)
+
+paid_engagement <- paid_students %>%
+  right_join(engagement, by = "account_key") %>%
+  mutate(date_diff = utc_date - join_date) %>%
+  filter(date_diff < 7) %>%
+  select(account_key, join_date, utc_date, num_courses_visited, 
+         total_minutes_visited, lessons_completed, projects_completed)
+
+str(paid_engagement)
+head(paid_engagement, 10)
+```
+
+I think its better to do a table join and then filter the data than to 
+make a bunch of lists and dictionaries to compare.   
+This is much less code and much more strait forward than the two functions
+and two loops I had to make in python to get this to work. 
+(albiet, we aren't using pandas yet so I hope there is a way to do something 
+similar in python with dataframes)
+
+***
+
+## Exploring Student Engagement
+
+```{r, echo=T, eval=T, cache=T}
+
+```
+
+***
+
+## Debugging data analysis code
+
+```{r, echo=T, eval=T, cache=T}
+
+```
+
+***
+
+## Lessons Completed in first week
+
+```{r, echo=T, eval=T, cache=T}
+
+```
+
+***
+
+## Number of visits in first week
+
+```{r, echo=T, eval=T, cache=T}
+
+```
+
+***
+
+## Splitting out Passing Students
+
+```{r, echo=T, eval=T, cache=T}
+
+```
+
+***
+
+## Comparing the Two Students Groups
+
+```{r, echo=T, eval=T, cache=T}
+
+```
+
+***
+
+## Making Histograms
+
+```{r, echo=T, eval=T, cache=T}
+
+```
+
+***
+
+## Improving Plots and Sharing Findings 
 
 ```{r, echo=T, eval=T, cache=T}
 
