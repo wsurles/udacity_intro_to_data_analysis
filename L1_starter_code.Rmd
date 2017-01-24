@@ -344,9 +344,10 @@ The process in the python class, looping and putting values and lists into dicti
 and then looping to see the max values one at a time,
 is not really the natural way I would think about this step.
 
-**Debugging**    
 We can easily see already that there are some counts that are off.  
 The max should be 7. Lets quickly assess.
+
+## Debugging data analysis code
 
 Okay, its clear that this is a systemic problem. Its in all of the data.  
 The `max_utc_date` looks good, but the `min_utc_date` is way before the join date.  
@@ -370,17 +371,35 @@ That would not really be a fair count of minutes.
 
 ***
 
-## Debugging data analysis code
-
-```{r, echo=T, eval=T, cache=T}
-
-```
-
-***
-
 ## Lessons Completed in first week
 
+Normally, I would just add this to the summary above.  
+There is no reason that we can't summarize all the columns we care about by account_key
+all in one step.   
+But here, to keep in line with the python class sections I will just do it again. 
+
 ```{r, echo=T, eval=T, cache=T}
+
+head(paid_engagement)
+
+paid_engagement3 <- paid_engagement %>%
+  group_by(account_key) %>%
+  summarize(
+    count = n(),
+    total_min = sum(total_minutes_visited),
+    total_lessons = sum(lessons_completed),
+    total_projects = sum(projects_completed),
+    join_date = min(join_date),
+    max_utc_date = max(utc_date),
+    min_utc_date = min(utc_date)
+    ) %>%
+  arrange(desc(total_lessons))
+
+head(paid_engagement3, 10)
+
+table(paid_engagement3$total_lessons)
+
+summary(paid_engagement3)
 
 ```
 

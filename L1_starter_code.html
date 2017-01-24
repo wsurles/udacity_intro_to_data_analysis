@@ -719,9 +719,11 @@ This is much less code and much more strait forward than the two functions and t
 That was pretty easy. Group by and summarize is how its done in sql and its also a very simple step to do in R.</p>
 <p>I am also adding other values so I can check on the data as a whole.</p>
 <p>The process in the python class, looping and putting values and lists into dictionaries and then looping to see the max values one at a time, is not really the natural way I would think about this step.</p>
-<p><strong>Debugging</strong><br />
-We can easily see already that there are some counts that are off.<br />
+<p>We can easily see already that there are some counts that are off.<br />
 The max should be 7. Lets quickly assess.</p>
+</div>
+<div id="debugging-data-analysis-code" class="section level2">
+<h2>Debugging data analysis code</h2>
 <p>Okay, its clear that this is a systemic problem. Its in all of the data.<br />
 The <code>max_utc_date</code> looks good, but the <code>min_utc_date</code> is way before the join date.<br />
 We need to go back to our last step and fix the function where we calc the <code>paid_engagement</code> data and add a filter to limit the <code>utc_date</code> to be greater than or equal to the <code>join_date</code>.<br />
@@ -733,12 +735,73 @@ Looking at the max for <code>total_min</code>… 3564 / 60 = 59.4 hours.</p>
 I wonder how they calculate the minutes. Is it just time the webpage is open. Sometimes I have the page open while I am working in the jupyter notebook on my machine. But somethimes I have the page open while I watch football highlights from last weekend. That would not really be a fair count of minutes.</p>
 <hr />
 </div>
-<div id="debugging-data-analysis-code" class="section level2">
-<h2>Debugging data analysis code</h2>
-<hr />
-</div>
 <div id="lessons-completed-in-first-week" class="section level2">
 <h2>Lessons Completed in first week</h2>
+<p>Normally, I would just add this to the summary above.<br />
+There is no reason that we can’t summarize all the columns we care about by account_key all in one step.<br />
+But here, to keep in line with the python class sections I will just do it again.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">head</span>(paid_engagement)</code></pre></div>
+<pre><code>##   account_key  join_date   utc_date num_courses_visited total_minutes_visited lessons_completed
+## 1           0 2015-01-09 2015-01-09                   1              11.67937                 0
+## 2           0 2015-01-09 2015-01-10                   2              37.28489                 0
+## 3           0 2015-01-09 2015-01-11                   2              53.63375                 0
+## 4           0 2015-01-09 2015-01-12                   1              33.48927                 0
+## 5           0 2015-01-09 2015-01-13                   1              64.77968                 0
+## 6           0 2015-01-09 2015-01-14                   1             151.61758                 1
+##   projects_completed
+## 1                  0
+## 2                  0
+## 3                  0
+## 4                  0
+## 5                  0
+## 6                  0</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">paid_engagement3 &lt;-<span class="st"> </span>paid_engagement %&gt;%
+<span class="st">  </span><span class="kw">group_by</span>(account_key) %&gt;%
+<span class="st">  </span><span class="kw">summarize</span>(
+    <span class="dt">count =</span> <span class="kw">n</span>(),
+    <span class="dt">total_min =</span> <span class="kw">sum</span>(total_minutes_visited),
+    <span class="dt">total_lessons =</span> <span class="kw">sum</span>(lessons_completed),
+    <span class="dt">total_projects =</span> <span class="kw">sum</span>(projects_completed),
+    <span class="dt">join_date =</span> <span class="kw">min</span>(join_date),
+    <span class="dt">max_utc_date =</span> <span class="kw">max</span>(utc_date),
+    <span class="dt">min_utc_date =</span> <span class="kw">min</span>(utc_date)
+    ) %&gt;%
+<span class="st">  </span><span class="kw">arrange</span>(<span class="kw">desc</span>(total_lessons))
+
+<span class="kw">head</span>(paid_engagement3, <span class="dv">10</span>)</code></pre></div>
+<pre><code>## Source: local data frame [10 x 8]
+## 
+##    account_key count total_min total_lessons total_projects  join_date max_utc_date min_utc_date
+##          (int) (int)     (dbl)         (int)          (int)     (date)       (date)       (date)
+## 1          633     7 1689.1891            36              0 2015-07-17   2015-07-23   2015-07-17
+## 2          885     7 1403.3666            27              0 2015-07-16   2015-07-22   2015-07-16
+## 3          163     7 3564.7333            20              0 2015-07-09   2015-07-15   2015-07-09
+## 4          218     7 2393.5422            20              0 2015-07-08   2015-07-14   2015-07-08
+## 5          812     7 1764.5368            20              0 2015-07-09   2015-07-15   2015-07-09
+## 6          526     7  670.3439            18              0 2015-07-16   2015-07-22   2015-07-16
+## 7          317     7 2778.3161            17              0 2015-07-09   2015-07-15   2015-07-09
+## 8         1070     7 1309.1846            16              0 2015-07-19   2015-07-25   2015-07-19
+## 9          164     7  765.5528            15              0 2015-07-16   2015-07-22   2015-07-16
+## 10         403     7  604.3551            15              0 2015-07-16   2015-07-22   2015-07-16</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">table</span>(paid_engagement3$total_lessons)</code></pre></div>
+<pre><code>## 
+##   0   1   2   3   4   5   6   7   8   9  10  11  12  13  15  16  17  18  20  27  36 
+## 506 180 100  55  37  37  25  11  10  12   7   1   2   2   2   1   1   1   3   1   1</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">summary</span>(paid_engagement3)</code></pre></div>
+<pre><code>##   account_key         count         total_min       total_lessons    total_projects   
+##  Min.   :   0.0   Min.   :1.000   Min.   :   0.00   Min.   : 0.000   Min.   :0.00000  
+##  1st Qu.: 250.5   1st Qu.:7.000   1st Qu.:  13.74   1st Qu.: 0.000   1st Qu.:0.00000  
+##  Median : 502.0   Median :7.000   Median : 129.86   Median : 0.000   Median :0.00000  
+##  Mean   : 552.8   Mean   :6.954   Mean   : 306.71   Mean   : 1.636   Mean   :0.00603  
+##  3rd Qu.: 828.5   3rd Qu.:7.000   3rd Qu.: 451.90   3rd Qu.: 2.000   3rd Qu.:0.00000  
+##  Max.   :1305.0   Max.   :7.000   Max.   :3564.73   Max.   :36.000   Max.   :2.00000  
+##    join_date           max_utc_date         min_utc_date       
+##  Min.   :2014-11-10   Min.   :2014-11-16   Min.   :2014-11-10  
+##  1st Qu.:2015-01-08   1st Qu.:2015-01-14   1st Qu.:2015-01-08  
+##  Median :2015-04-01   Median :2015-04-07   Median :2015-04-01  
+##  Mean   :2015-03-16   Mean   :2015-03-22   Mean   :2015-03-16  
+##  3rd Qu.:2015-05-12   3rd Qu.:2015-05-18   3rd Qu.:2015-05-12  
+##  Max.   :2015-08-23   Max.   :2015-08-27   Max.   :2015-08-23</code></pre>
 <hr />
 </div>
 <div id="number-of-visits-in-first-week" class="section level2">
