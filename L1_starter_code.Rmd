@@ -289,7 +289,7 @@ head(paid_students)
 paid_engagement <- paid_students %>%
   right_join(engagement, by = "account_key") %>%
   mutate(date_diff = utc_date - join_date) %>%
-  filter(date_diff < 7) %>%
+  filter(date_diff < 7 & date_diff >=0) %>%
   select(account_key, join_date, utc_date, num_courses_visited, 
          total_minutes_visited, lessons_completed, projects_completed)
 
@@ -308,9 +308,65 @@ similar in python with dataframes)
 
 ## Exploring Student Engagement
 
+All we want here is to see the total minutes spent in the first week per student.
+And to look at some summary statistics of that data. 
+
 ```{r, echo=T, eval=T, cache=T}
 
+paid_engagement2 <- paid_engagement %>%
+  group_by(account_key) %>%
+  summarize(
+    count = n(),
+    total_min = sum(total_minutes_visited),
+    join_date = min(join_date),
+    max_utc_date = max(utc_date),
+    min_utc_date = min(utc_date)
+    ) %>%
+  arrange(desc(count))
+
+head(paid_engagement2, 20)
+
+table(paid_engagement2$count)
+
+paid_engagement2 %>% arrange(desc(total_min)) %>% head()
+
+summary(paid_engagement2)
+
 ```
+
+**Comments on the Process**  
+That was pretty easy. Group by and summarize is how its done in sql and its also
+a very simple step to do in R.  
+
+I am also adding other values so I can check on the data as a whole. 
+
+The process in the python class, looping and putting values and lists into dictionaries 
+and then looping to see the max values one at a time,
+is not really the natural way I would think about this step.
+
+**Debugging**    
+We can easily see already that there are some counts that are off.  
+The max should be 7. Lets quickly assess.
+
+Okay, its clear that this is a systemic problem. Its in all of the data.  
+The `max_utc_date` looks good, but the `min_utc_date` is way before the join date.  
+We need to go back to our last step and fix the function where we calc the `paid_engagement` data and 
+add a filter to limit the `utc_date` to be greater than or equal to the `join_date`.   
+There are students that enrolled multiple times and so we are picking up data
+from their previous enrollments. 
+
+Sweet, that fixed it. 
+
+**Wondering about the data collection**  
+Looking at the max for `total_min`...
+3564 / 60 = `r 3564 / 60` hours. 
+
+Thats a lot in one week. More than a full time job. That students wasn't trying to 
+waste any time to learn some data analysis.   
+I wonder how they calculate the minutes. Is it just time the webpage is open. 
+Sometimes I have the page open while I am working in the jupyter notebook on my machine. 
+But somethimes I have the page open while I watch football highlights from last weekend. 
+That would not really be a fair count of minutes. 
 
 ***
 

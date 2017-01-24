@@ -606,12 +606,12 @@ Some students had joined and canceled multiple times. For example, account_key 3
 <div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">paid_engagement &lt;-<span class="st"> </span>paid_students %&gt;%
 <span class="st">  </span><span class="kw">right_join</span>(engagement, <span class="dt">by =</span> <span class="st">&quot;account_key&quot;</span>) %&gt;%
 <span class="st">  </span><span class="kw">mutate</span>(<span class="dt">date_diff =</span> utc_date -<span class="st"> </span>join_date) %&gt;%
-<span class="st">  </span><span class="kw">filter</span>(date_diff &lt;<span class="st"> </span><span class="dv">7</span>) %&gt;%
+<span class="st">  </span><span class="kw">filter</span>(date_diff &lt;<span class="st"> </span><span class="dv">7</span> &amp;<span class="st"> </span>date_diff &gt;=<span class="dv">0</span>) %&gt;%
 <span class="st">  </span><span class="kw">select</span>(account_key, join_date, utc_date, num_courses_visited, 
          total_minutes_visited, lessons_completed, projects_completed)
 
 <span class="kw">str</span>(paid_engagement)</code></pre></div>
-<pre><code>## 'data.frame':    21508 obs. of  7 variables:
+<pre><code>## 'data.frame':    6919 obs. of  7 variables:
 ##  $ account_key          : int  0 0 0 0 0 0 0 1 1 1 ...
 ##  $ join_date            : Date, format: &quot;2015-01-09&quot; &quot;2015-01-09&quot; &quot;2015-01-09&quot; ...
 ##  $ utc_date             : Date, format: &quot;2015-01-09&quot; &quot;2015-01-10&quot; &quot;2015-01-11&quot; ...
@@ -648,6 +648,89 @@ This is much less code and much more strait forward than the two functions and t
 </div>
 <div id="exploring-student-engagement" class="section level2">
 <h2>Exploring Student Engagement</h2>
+<p>All we want here is to see the total minutes spent in the first week per student. And to look at some summary statistics of that data.</p>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">paid_engagement2 &lt;-<span class="st"> </span>paid_engagement %&gt;%
+<span class="st">  </span><span class="kw">group_by</span>(account_key) %&gt;%
+<span class="st">  </span><span class="kw">summarize</span>(
+    <span class="dt">count =</span> <span class="kw">n</span>(),
+    <span class="dt">total_min =</span> <span class="kw">sum</span>(total_minutes_visited),
+    <span class="dt">join_date =</span> <span class="kw">min</span>(join_date),
+    <span class="dt">max_utc_date =</span> <span class="kw">max</span>(utc_date),
+    <span class="dt">min_utc_date =</span> <span class="kw">min</span>(utc_date)
+    ) %&gt;%
+<span class="st">  </span><span class="kw">arrange</span>(<span class="kw">desc</span>(count))
+
+<span class="kw">head</span>(paid_engagement2, <span class="dv">20</span>)</code></pre></div>
+<pre><code>## Source: local data frame [20 x 6]
+## 
+##    account_key count  total_min  join_date max_utc_date min_utc_date
+##          (int) (int)      (dbl)     (date)       (date)       (date)
+## 1            0     7  494.88050 2015-01-09   2015-01-15   2015-01-09
+## 2            1     7   18.57638 2015-05-06   2015-05-12   2015-05-06
+## 3            2     7    0.00000 2015-06-08   2015-06-14   2015-06-08
+## 4            3     7    0.00000 2015-03-10   2015-03-16   2015-03-10
+## 5            4     7   33.32140 2015-05-12   2015-05-18   2015-05-12
+## 6            5     7  329.75786 2015-01-07   2015-01-13   2015-01-07
+## 7            6     7  780.45455 2015-06-05   2015-06-11   2015-06-05
+## 8            7     7  104.20389 2015-05-12   2015-05-18   2015-05-12
+## 9            8     7  989.11364 2015-05-06   2015-05-12   2015-05-06
+## 10           9     7  448.47138 2015-01-08   2015-01-14   2015-01-08
+## 11          10     7  130.12348 2014-11-10   2014-11-16   2014-11-10
+## 12          11     7    0.00000 2015-04-24   2015-04-30   2015-04-24
+## 13          12     7  179.47191 2014-11-10   2014-11-16   2014-11-10
+## 14          13     7 1013.38340 2015-04-01   2015-04-07   2015-04-01
+## 15          14     7   65.62219 2015-06-03   2015-06-09   2015-06-03
+## 16          15     7  983.37504 2015-03-04   2015-03-10   2015-03-04
+## 17          16     7  119.12030 2015-05-13   2015-05-19   2015-05-13
+## 18          17     7  235.49969 2015-05-11   2015-05-17   2015-05-11
+## 19          18     7  155.13616 2014-11-10   2014-11-16   2014-11-10
+## 20          19     7    0.00000 2015-04-06   2015-04-12   2015-04-06</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">table</span>(paid_engagement2$count)</code></pre></div>
+<pre><code>## 
+##   1   3   4   5   6   7 
+##   1   1   3  10   7 973</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r">paid_engagement2 %&gt;%<span class="st"> </span><span class="kw">arrange</span>(<span class="kw">desc</span>(total_min)) %&gt;%<span class="st"> </span><span class="kw">head</span>()</code></pre></div>
+<pre><code>## Source: local data frame [6 x 6]
+## 
+##   account_key count total_min  join_date max_utc_date min_utc_date
+##         (int) (int)     (dbl)     (date)       (date)       (date)
+## 1         163     7  3564.733 2015-07-09   2015-07-15   2015-07-09
+## 2         317     7  2778.316 2015-07-09   2015-07-15   2015-07-09
+## 3         303     7  2700.488 2015-05-11   2015-05-17   2015-05-11
+## 4         359     7  2530.561 2015-07-15   2015-07-21   2015-07-15
+## 5         218     7  2393.542 2015-07-08   2015-07-14   2015-07-08
+## 6         175     7  2375.795 2015-05-09   2015-05-15   2015-05-09</code></pre>
+<div class="sourceCode"><pre class="sourceCode r"><code class="sourceCode r"><span class="kw">summary</span>(paid_engagement2)</code></pre></div>
+<pre><code>##   account_key         count         total_min         join_date           max_utc_date       
+##  Min.   :   0.0   Min.   :1.000   Min.   :   0.00   Min.   :2014-11-10   Min.   :2014-11-16  
+##  1st Qu.: 250.5   1st Qu.:7.000   1st Qu.:  13.74   1st Qu.:2015-01-08   1st Qu.:2015-01-14  
+##  Median : 502.0   Median :7.000   Median : 129.86   Median :2015-04-01   Median :2015-04-07  
+##  Mean   : 552.8   Mean   :6.954   Mean   : 306.71   Mean   :2015-03-16   Mean   :2015-03-22  
+##  3rd Qu.: 828.5   3rd Qu.:7.000   3rd Qu.: 451.90   3rd Qu.:2015-05-12   3rd Qu.:2015-05-18  
+##  Max.   :1305.0   Max.   :7.000   Max.   :3564.73   Max.   :2015-08-23   Max.   :2015-08-27  
+##   min_utc_date       
+##  Min.   :2014-11-10  
+##  1st Qu.:2015-01-08  
+##  Median :2015-04-01  
+##  Mean   :2015-03-16  
+##  3rd Qu.:2015-05-12  
+##  Max.   :2015-08-23</code></pre>
+<p><strong>Comments on the Process</strong><br />
+That was pretty easy. Group by and summarize is how its done in sql and its also a very simple step to do in R.</p>
+<p>I am also adding other values so I can check on the data as a whole.</p>
+<p>The process in the python class, looping and putting values and lists into dictionaries and then looping to see the max values one at a time, is not really the natural way I would think about this step.</p>
+<p><strong>Debugging</strong><br />
+We can easily see already that there are some counts that are off.<br />
+The max should be 7. Lets quickly assess.</p>
+<p>Okay, its clear that this is a systemic problem. Its in all of the data.<br />
+The <code>max_utc_date</code> looks good, but the <code>min_utc_date</code> is way before the join date.<br />
+We need to go back to our last step and fix the function where we calc the <code>paid_engagement</code> data and add a filter to limit the <code>utc_date</code> to be greater than or equal to the <code>join_date</code>.<br />
+There are students that enrolled multiple times and so we are picking up data from their previous enrollments.</p>
+<p>Sweet, that fixed it.</p>
+<p><strong>Wondering about the data collection</strong><br />
+Looking at the max for <code>total_min</code>… 3564 / 60 = 59.4 hours.</p>
+<p>Thats a lot in one week. More than a full time job. That students wasn’t trying to waste any time to learn some data analysis.<br />
+I wonder how they calculate the minutes. Is it just time the webpage is open. Sometimes I have the page open while I am working in the jupyter notebook on my machine. But somethimes I have the page open while I watch football highlights from last weekend. That would not really be a fair count of minutes.</p>
 <hr />
 </div>
 <div id="debugging-data-analysis-code" class="section level2">
