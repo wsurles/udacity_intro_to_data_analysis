@@ -2,11 +2,9 @@
 title: "L1_starter_code"
 author: "William Surles"
 date: "January 21, 2017"
-output: 
-  html_document:
-    self_contained: yes
-    theme: flatly
-    highlight: tango
+output:
+  html_document: default
+  html_notebook: null
 ---
 
 This is just me copying the python class work into R.  
@@ -407,23 +405,165 @@ summary(paid_engagement3)
 
 ## Number of visits in first week
 
+Again, This would simple be a calculation added to the data crunching above.
+Here we will first make a `has_visited` field with a mutate, 
+and then sum it up like the rest. 
+I'll do it all again here so we have the full crunched data set to view.
+
 ```{r, echo=T, eval=T, cache=T}
 
+head(paid_engagement)
+
+paid_engagement4 <- paid_engagement %>%
+  mutate(has_visited = num_courses_visited > 0) %>%
+  group_by(account_key) %>%
+  summarize(
+    count = n(),
+    total_min = sum(total_minutes_visited),
+    total_lessons = sum(lessons_completed),
+    total_projects = sum(projects_completed),
+    total_days_visited = sum(has_visited),
+    join_date = min(join_date),
+    max_utc_date = max(utc_date),
+    min_utc_date = min(utc_date)
+    ) %>%
+  arrange(desc(total_days_visited))
+
+head(paid_engagement4, 10)
+
+table(paid_engagement4$total_days_visited)
+
+summary(paid_engagement4)
 ```
 
 ***
 
 ## Splitting out Passing Students
 
+First lets just explore this new data set a bit. 
 ```{r, echo=T, eval=T, cache=T}
 
+head(project)
+table(project$assigned_rating)
+table(project$lesson_key)
+
 ```
+
+We can see that there are several projects in this set. 
+
+We can also see there are `PASSED` and `DISTINCTION` ratings which should be counted.
+
+```{r, echo=T, eval=T, cache=T}
+
+project %>%
+  filter(
+    lesson_key %in% c('746169184', '3176718735'),
+    account_key == 133
+    ) %>%
+  arrange(completion_date) 
+
+```
+
+Also, we see that many students will have multiple ratings for this project. 
+For example, student 133 did it 6 times before completing. 
+I'm not sure if it took them 7 days to completed it while logging into udacity, or if they
+they submitted it incomplete or what. But we will definitely need to break it down by account key
+so we don't double count accounts. 
+
+Aight, lets get this unique list of students that have passed. 
+
+```{r, echo=T, eval=T, cache=T}
+
+project_passing <- project %>%
+  filter(
+    lesson_key %in% c('746169184', '3176718735'),
+    assigned_rating %in% c('PASSED','DISTINCTION')
+    ) %>%
+  group_by(account_key) %>%
+  summarize(n = n()) %>%
+  arrange(desc(n))
+
+project_passing
+
+```
+
+This data frame has the unique list of students that have passes the projet
+as well as the number of times they have passed. 
+
+There are 647 students that have passed the project. 
+
+Interestingly, some of these students passed the project multiple times. 
+
+Maybe they went back through the class again to try and complete it and used there initial project code. 
+One student passed the project 3 times. 
+
+```{r, echo=T, eval=T, cache=T}
+
+project %>%
+  filter(
+    lesson_key %in% c('746169184', '3176718735'),
+    assigned_rating %in% c('PASSED','DISTINCTION'),
+    account_key %in% c(508,118,310,316)
+    ) %>%
+  arrange(account_key, completion_date)
+
+```
+
+
+Note: There is no need to splid the passing and non passing engagment into
+two separate data frames. I can easily filter the engagment data frame
+by the list of accounts in the project passing or non passing data frmaes. 
 
 ***
 
 ## Comparing the Two Students Groups
 
+Here we do exacly what we did above to summarize the engagement data but this time 
+we will first filter by the list of passing and non-passing students. Thats it really.
+
+Here I can do all the summaries at once. There is no reason to split it up. 
+
 ```{r, echo=T, eval=T, cache=T}
+
+paid_engagement_passing <- paid_engagement %>%
+  filter(account_key %in% project_passing$account_key) %>%
+  mutate(has_visited = num_courses_visited > 0) %>%
+  group_by(account_key) %>%
+  summarize(
+    count = n(),
+    total_min = sum(total_minutes_visited),
+    total_lessons = sum(lessons_completed),
+    total_projects = sum(projects_completed),
+    total_days_visited = sum(has_visited)
+    ) %>%
+  arrange(desc(total_min))
+
+head(paid_engagement_passing, 10)
+
+summary(paid_engagement_passing)
+
+```
+
+And the same for non passing students...
+
+```{r, echo=T, eval=T, cache=T}
+
+paid_engagement_non_passing <- paid_engagement %>%
+  filter(!(account_key %in% project_passing$account_key))  %>%
+  mutate(has_visited = num_courses_visited > 0) %>%
+  group_by(account_key) %>%
+  summarize(
+    count = n(),
+    total_min = sum(total_minutes_visited),
+    total_lessons = sum(lessons_completed),
+    total_projects = sum(projects_completed),
+    total_days_visited = sum(has_visited)
+    ) %>%
+  arrange(desc(total_min))
+
+head(paid_engagement_non_passing, 10)
+
+summary(paid_engagement_non_passing)
 
 ```
 
@@ -433,12 +573,24 @@ summary(paid_engagement3)
 
 ```{r, echo=T, eval=T, cache=T}
 
+## total minutes
+paid_engagement_passing %>% ggvis(~total_min) %>% layer_histograms()
+paid_engagement_non_passing %>% ggvis(~total_min) %>% layer_histograms()
+
+## total lessons
+paid_engagement_passing %>% ggvis(~total_lessons) %>% layer_histograms()
+paid_engagement_non_passing %>% ggvis(~total_lessons) %>% layer_histograms()
+
+## total days visited
+paid_engagement_passing %>% ggvis(~total_days_visited) %>% layer_histograms()
+paid_engagement_non_passing %>% ggvis(~total_days_visited) %>% layer_histograms()
+
 ```
 
 ***
 
 ## Improving Plots and Sharing Findings 
 
-```{r, echo=T, eval=T, cache=T}
-
-```
+These already look pretty good here with ggvis. There is no need to download
+a library to make another library look nicer (matplotlib -> seaborn). That seems weird. 
+Annwyas. I'm done with the first lesson. Woot! 
